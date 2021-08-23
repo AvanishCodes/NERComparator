@@ -1,3 +1,7 @@
+
+import spacy
+import pandas as pd
+
 # Run a spaCy NLP model
 def spacy_runner(model: str = 'medium') -> None:
     '''
