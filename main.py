@@ -23,6 +23,7 @@ from flair.models import SequenceTagger  # Tagger inside Flair module
 # Import the pretrained pipeline from SparkNLP
 from sparknlp.pretrained import PretrainedPipeline
 from multiprocessing import Process
+from joblib import Parallel, delayed    # Parallel Processing
 
 
 # Function to resolve the model type
@@ -48,9 +49,9 @@ def write_to_file(filename: str, model: str, model_type: str) -> None:
                             None
     '''
     if model == 'spacy':
-		model_name = 'en_core_web_sm' if model == 'small' else 'en_core_web_lg' if model == 'large' else 'en_core_web_md'
-		nlp = spacy.load(model_name)
-		del model_name
+        model_name = 'en_core_web_sm' if model == 'small' else 'en_core_web_lg' if model == 'large' else 'en_core_web_md'
+        nlp = spacy.load(model_name)
+        del model_name
     with open(filename, 'w') as f:
         for df in pd.read_csv('./data.csv', chunksize=32):
             data = df['text'].values.tolist()
@@ -206,7 +207,7 @@ def spark_runner(model: str = 'small') -> None:
         # 'con-base': 'ner_conll_roberta_base',
     }
     model_name = model_type[model]
-    sparknlp.start(gpu=True)
+    sparknlp.start(gpu=False)
     # print(colored('Spark model: {model_name}', 'green').format(model_name=model_name))
     pipeline = PretrainedPipeline(model_name, lang='en')
     del model_type
@@ -214,13 +215,19 @@ def spark_runner(model: str = 'small') -> None:
     filename = f'./data/spark_{model}.csv'
     print(colored(f'[*] Writing data to {filename}', 'yellow'))
     with open(filename, 'w') as f:
-        for df in pd.read_csv('./data.csv', chunksize=32):
+        for df in pd.read_csv('./data.csv', chunksize=1000):
+            # print(type(df))
+            # print(df)
+            # print(df.head())
             data = df['text'].values.tolist()
             del df
             for text in data:
                 annotations = pipeline.fullAnnotate(u'{}'.format(text))
                 for annotation in annotations:
+                    # print(annotation)
+                    # print(type(annotation))
                     for entity in annotation['entities']:
+                        # print(entity)
                         type_of_result = entity.metadata.__getitem__('entity')
                         if type_of_result == 'PERSON' or type_of_result == 'ORG':
                             f.write(f'{entity.result},{type_of_result}\n')
@@ -277,11 +284,12 @@ def time_counter(functions: list) -> None:
         Output: None
     '''
     # Print the runtime of the functions
+    # Parallel(n_jobs=4)(delayed(process_model)(f) for f in functions)
     for f in functions:
         process_model(f)
-        # p1 = Process(process(f))
+        # p1 = Process(process_model(f))
         # p1.start()
-        del f
+        # del f
         continue
     return
 
@@ -337,16 +345,16 @@ def main():
 
     # Time the execution of the functions
     functions = [
-        {'function': spacy_runner, 'parameters': {'model': 'small'}},
-        {'function': spacy_runner, 'parameters': {'model': 'medium'}},
-        # {'function': spacy_runner, 'parameters': {'model':'large'}},
+        # {'function': spacy_runner, 'parameters': {'model': 'small'}},
+        # {'function': spacy_runner, 'parameters': {'model': 'medium'}},
+        # {'function': spacy_runner, 'parameters': {'model': 'large'}},
         # {'function': flair_runner, 'parameters': {'model':'small'}},
         # {'function': flair_runner, 'parameters': {'model':'fast'}},
         # {'function': flair_runner, 'parameters': {'model':'large'}},
         # {'function': flair_runner, 'parameters': {'model':'ontonotes'}},
         # {'function': flair_runner, 'parameters': {'model':'ontonotes-fast'}},
         # {'function': stanza_runner, 'parameters': {'model':'fast'}},
-        # {'function': spark_runner, 'parameters': {'model':'small'}},
+        {'function': spark_runner, 'parameters': {'model': 'small'}},
         # {'function': spark_runner, 'parameters': {'model':'con-base'}},
         # {'function': flair_runner, 'parameters': {'model':'ontonotes-large'}},
     ]
