@@ -13,6 +13,10 @@ import stanza  # stanza NLP Module
 import sparknlp  # Spark NLP Module
 import os  # To create the folder structure
 from termcolor import colored  # Color the output
+from flair_runner import flair_runner
+from spacy_runner import spacy_runner
+from stanza_runner import stanza_runner
+from spark_runner import spark_runner
 import pandas as pd  # To read the csv file
 from data import Data  # Import the data class
 from flair.data import Sentence  # Flair Module
@@ -26,187 +30,7 @@ from multiprocessing import Process
 from joblib import Parallel, delayed    # Parallel Processing
 
 
-
-# Flair testing based on model input
-def flair_runner(model: str = 'fast') -> None:
-    '''
-        Description: This function is used to load the data from the dataset and process it to identify the named entities.
-        Input: Model type
-        Output: Inside a file spacy_large.csv, the data is stored in the following format:	
-        Model Used: Flair English Model: large/small/fast/ontonotes/ontonotes-fast/ontonotes-large
-    '''
-
-    # Determine the flair model to be used
-    model_type = {
-        'small': 'ner-english',
-        'large': 'ner-english-large',
-        'fast': 'ner-english-fast',
-        'ontonotes': 'ner-english-ontonotes',
-        'ontonotes-fast': 'ner-english-ontonotes-fast',
-        'ontonotes-large': 'ner-english-ontonotes-large'
-    }
-    # load tagger based on the model
-    model_name = model_type[model]
-    del model_type
-    tagger = SequenceTagger.load(f'flair/{model_name}')
-
-    # Determine the file to read into
-    model_file = {
-        'small': 'small',
-        'large': 'large',
-        'fast': 'fast',
-        'ontonotes': 'ontonotes',
-        'ontonotes-fast': 'ontonotes-fast',
-        'ontonotes-large': 'ontonotes-large'
-    }
-    filename = f'./data/flair_{model_file[model]}.csv'
-    del model_file
-    # Write the data to a file
-    with open(filename, 'w') as f:
-        for df in pd.read_csv('./data.csv', chunksize=32):
-            data = df['text'].values.tolist()
-            for text in data:
-                # Process the text
-                sentence = Sentence(text)
-                # predict NER tags
-                tagger.predict(sentence)
-                del text
-                # Save the found tags in a file
-                for entity in sentence.get_spans('ner'):
-                    if entity.tag == 'PERSON' or entity.tag == 'ORG' or entity.tag == 'PER':
-                        print(entity.start_pos, entity.end_pos,
-                              entity.text, entity.tag, sep=',', file=f)
-                    del entity
-                    continue
-                del sentence
-                continue
-            continue
-    return
-
-# Run a spaCy NLP model
-
-
-def spacy_runner(model: str = 'medium') -> None:
-    '''
-        Description: This function is used to load the data from the dataset and process it to identify the named entities.
-        Output: Inside a file spacy_large.csv, the data is stored in the following
-                format:	token.text, token.lemma_, token.pos_, token.tag_, token.dep_, token.shape_, token.is_alpha, token.is_stop
-        Model Used: Spacy Small/Medium/Large
-        Default: Spacy Medium
-    '''
-
-    # Determine and Load the spacy model
-    model_name = 'en_core_web_sm' if model == 'small' else 'en_core_web_lg' if model == 'large' else 'en_core_web_md'
-    nlp = spacy.load(model_name)
-    del model_name
-    # Write the data to a file
-    filename = f'./data/spacy_{model}.csv'
-    with open(filename, 'w') as f:
-        for df in pd.read_csv('./data.csv', chunksize=32):
-            data = df['text'].values.tolist()
-            del df
-            for text in data:
-                # Process the text
-                doc = nlp(u'{}'.format(text))
-                for token in doc.ents:
-                    if token.label_ == 'PERSON' or token.label_ == 'ORG' or token.label_ == 'PER':
-                        f.write(f'{token.text},{token.label_}\n')
-                    del token
-                    continue
-                del text
-                del doc
-                continue
-            del data
-            continue
-    return
-
-# Run a stanza based NLP model
-
-
-def stanza_runner(model: str = 'small') -> None:
-    '''
-        Description: This function is used to load the data from the dataset and process it to identify the named entities.
-        Output: Inside a file stanza_small.csv, the data is stored in the following
-                format: text, type
-        Model Used: Stanza Small/Medium/Large
-        Default: Stanza Small
-    '''
-    # Load the stanza model
-    nlp = stanza.Pipeline(lang='en', processors='tokenize,ner')
-
-    # Write the data to a file
-    filename = f'./data/stanza_{model}.csv'
-    with open(filename, 'w') as f:
-        for df in pd.read_csv('./data.csv', chunksize=32):
-            data = df['text'].values.tolist()
-            del df
-            for text in data:
-                # Process the text
-                doc = nlp(u'{}'.format(text))
-                del text
-                for ent in doc.entities:
-                    if ent.type == 'PERSON' or ent.type == 'ORG':
-                        f.write(f'{ent.text},{ent.type}\n')
-                    del ent
-                    continue
-                del doc
-                continue
-            continue
-    return
-
-# Run a spark NLP model
-
-
-def spark_runner(model: str = 'small') -> None:
-    '''
-        Description: This function is used to load the data from the dataset and process it to identify the named entities.
-        Output: Inside a file spark_small.csv, the data is stored in the following
-                format: text, type
-        Model Used: Spark Small/Medium/Large
-        Default: Spark Small
-    '''
-    # Load the spark model
-    model_type = {
-        'small': 'onto_recognize_entities_sm',
-        # 'con-base': 'ner_conll_roberta_base',
-    }
-    model_name = model_type[model]
-    sparknlp.start(gpu=False)
-    # print(colored('Spark model: {model_name}', 'green').format(model_name=model_name))
-    pipeline = PretrainedPipeline(model_name, lang='en')
-    del model_type
-    # Write the data to a file
-    filename = f'./data/spark_{model}.csv'
-    print(colored(f'[*] Writing data to {filename}', 'yellow'))
-    with open(filename, 'w') as f:
-        for df in pd.read_csv('./data.csv', chunksize=1000):
-            # print(type(df))
-            # print(df)
-            # print(df.head())
-            data = df['text'].values.tolist()
-            del df
-            for text in data:
-                annotations = pipeline.fullAnnotate(u'{}'.format(text))
-                for annotation in annotations:
-                    # print(annotation)
-                    # print(type(annotation))
-                    for entity in annotation['entities']:
-                        # print(entity)
-                        type_of_result = entity.metadata.__getitem__('entity')
-                        if type_of_result == 'PERSON' or type_of_result == 'ORG':
-                            f.write(f'{entity.result},{type_of_result}\n')
-                        del entity
-                        continue
-                del annotations
-                continue
-            continue
-            del data
-            continue
-    return
-
 #	Process a function
-
-
 def process_model(f) -> None:
     '''
         Description: This function is used to run the NLP model on the dataset.
@@ -309,16 +133,16 @@ def main():
 
     # Time the execution of the functions
     functions = [
-        # {'function': spacy_runner, 'parameters': {'model': 'small'}},
-        # {'function': spacy_runner, 'parameters': {'model': 'medium'}},
-        # {'function': spacy_runner, 'parameters': {'model': 'large'}},
+        {'function': spacy_runner, 'parameters': {'model': 'small'}},
+        {'function': spacy_runner, 'parameters': {'model': 'medium'}},
+        {'function': spacy_runner, 'parameters': {'model': 'large'}},
         # {'function': flair_runner, 'parameters': {'model':'small'}},
         # {'function': flair_runner, 'parameters': {'model':'fast'}},
         # {'function': flair_runner, 'parameters': {'model':'large'}},
         # {'function': flair_runner, 'parameters': {'model':'ontonotes'}},
         # {'function': flair_runner, 'parameters': {'model':'ontonotes-fast'}},
         # {'function': stanza_runner, 'parameters': {'model':'fast'}},
-        {'function': spark_runner, 'parameters': {'model': 'small'}},
+        # {'function': spark_runner, 'parameters': {'model': 'small'}},
         # {'function': spark_runner, 'parameters': {'model':'con-base'}},
         # {'function': flair_runner, 'parameters': {'model':'ontonotes-large'}},
     ]
