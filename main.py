@@ -26,42 +26,6 @@ from multiprocessing import Process
 from joblib import Parallel, delayed    # Parallel Processing
 
 
-# Function to resolve the model type
-def resolve_model(model: str) -> None:
-    '''
-        Function to resolve the model type
-        Input:
-                model: The model type
-        Output:
-                None
-    '''
-    return
-# Function to write on the file
-
-
-def write_to_file(filename: str, model: str, model_type: str) -> None:
-    '''
-            Function to write on the file
-            Input:
-                            filename: The file name
-                            model: The model type
-            Output:
-                            None
-    '''
-    if model == 'spacy':
-        model_name = 'en_core_web_sm' if model == 'small' else 'en_core_web_lg' if model == 'large' else 'en_core_web_md'
-        nlp = spacy.load(model_name)
-        del model_name
-    with open(filename, 'w') as f:
-        for df in pd.read_csv('./data.csv', chunksize=32):
-            data = df['text'].values.tolist()
-            del df
-            for text in data:
-                if model == 'spacy':
-                    pass
-            continue
-    return
-
 
 # Flair testing based on model input
 def flair_runner(model: str = 'fast') -> None:
