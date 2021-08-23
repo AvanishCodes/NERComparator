@@ -1,3 +1,4 @@
+import stanza
 # Run a stanza based NLP model
 def stanza_runner(model: str = 'small') -> None:
     '''

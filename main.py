@@ -8,24 +8,17 @@
 	Description: This script is used to load the data from the dataset and process it to identify the named entities.
 '''
 # Import the required libraries
-import spacy  # Spacy Module
-import stanza  # stanza NLP Module
-import sparknlp  # Spark NLP Module
 import os  # To create the folder structure
 from termcolor import colored  # Color the output
 from flair_runner import flair_runner
 from spacy_runner import spacy_runner
-from stanza_runner import stanza_runner
 from spark_runner import spark_runner
+from stanza_runner import stanza_runner
 import pandas as pd  # To read the csv file
-from data import Data  # Import the data class
-from flair.data import Sentence  # Flair Module
 from matplotlib import pyplot as plt
 import timeit  # To calculate the time taken to run the code
 from memory_profiler import profile  # To measure memory usage
-from flair.models import SequenceTagger  # Tagger inside Flair module
 # Import the pretrained pipeline from SparkNLP
-from sparknlp.pretrained import PretrainedPipeline
 from multiprocessing import Process
 from joblib import Parallel, delayed    # Parallel Processing
 

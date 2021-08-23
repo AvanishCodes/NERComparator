@@ -1,5 +1,9 @@
+from flair.data import Sentence  # Flair Module
+from flair.models import SequenceTagger  # Tagger inside Flair module
 
 # Flair testing based on model input
+
+
 def flair_runner(model: str = 'fast') -> None:
     '''
         Description: This function is used to load the data from the dataset and process it to identify the named entities.

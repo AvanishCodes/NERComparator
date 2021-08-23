@@ -1,3 +1,6 @@
+import sparknlp
+from sparknlp.pretrained import PretrainedPipeline
+
 # Run a spark NLP model
 def spark_runner(model: str = 'small') -> None:
     '''
